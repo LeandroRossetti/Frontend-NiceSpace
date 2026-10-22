@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, getErrorMessage } from '../api/client'
-import type { AvailabilityElement, AvailabilityResponse, TeamDto } from '../api/types'
+import type { AvailabilityElement, AvailabilityResponse, FloorDto, TeamDto } from '../api/types'
 import MapCanvas from '../components/MapCanvas'
 import Spinner from '../components/Spinner'
 
@@ -17,6 +17,8 @@ export default function WorkspaceAvailability() {
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('11:00')
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(null)
+  const [floors, setFloors] = useState<FloorDto[]>([])
+  const [floorId, setFloorId] = useState<number | ''>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -28,6 +30,16 @@ export default function WorkspaceAvailability() {
 
   useEffect(() => {
     api
+      .get<FloorDto[]>(`/workspaces/${workspaceId}/floors`)
+      .then(({ data }) => {
+        setFloors(data)
+        setFloorId(data[0]?.id ?? '')
+      })
+      .catch((err) => setError(getErrorMessage(err)))
+  }, [workspaceId])
+
+  useEffect(() => {
+    api
       .get<TeamDto[]>('/teams/mine')
       .then(({ data }) => setTeams(data))
       .catch(() => setTeams([]))
@@ -35,6 +47,10 @@ export default function WorkspaceAvailability() {
 
   const search = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (floorId === '') {
+      setError('Este edificio todavía no tiene pisos configurados.')
+      return
+    }
     setError('')
     setSuccess('')
     setSelected(null)
@@ -43,7 +59,7 @@ export default function WorkspaceAvailability() {
       const start = toInstant(date, startTime)
       const end = toInstant(date, endTime)
       const { data } = await api.get<AvailabilityResponse>(
-        `/workspaces/${workspaceId}/availability?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
+        `/workspaces/${workspaceId}/availability?floorId=${floorId}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
       )
       setAvailability(data)
     } catch (err) {
@@ -76,11 +92,12 @@ export default function WorkspaceAvailability() {
   }
 
   const searchRefetch = async () => {
+    if (floorId === '') return
     try {
       const start = toInstant(date, startTime)
       const end = toInstant(date, endTime)
       const { data } = await api.get<AvailabilityResponse>(
-        `/workspaces/${workspaceId}/availability?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
+        `/workspaces/${workspaceId}/availability?floorId=${floorId}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
       )
       setAvailability(data)
     } catch {
@@ -98,6 +115,23 @@ export default function WorkspaceAvailability() {
       </h1>
 
       <form onSubmit={search} className="flex flex-wrap gap-3 mb-6">
+        <div>
+          <label className="block text-sm text-gray-600 mb-1" htmlFor="floor-select">Piso</label>
+          <select
+            id="floor-select"
+            value={floorId}
+            onChange={(event) => {
+              setFloorId(event.target.value === '' ? '' : Number(event.target.value))
+              setAvailability(null)
+              setSelected(null)
+            }}
+            required
+            className="border border-gray-300 rounded-md px-3 py-2 bg-white"
+          >
+            <option value="" disabled>Seleccionar piso</option>
+            {floors.map((floor) => <option key={floor.id} value={floor.id}>{floor.nombre}</option>)}
+          </select>
+        </div>
         <div>
           <label className="block text-sm text-gray-600 mb-1">Fecha</label>
           <input
@@ -146,7 +180,7 @@ export default function WorkspaceAvailability() {
       ) : availability ? (
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1">
-            <MapCanvas elements={availability.elements} onSelect={(el) => el.available && setSelected(el)} />
+            <MapCanvas elements={availability.elements} objects={availability.objects ?? []} onSelect={(el) => el.available && setSelected(el)} />
             <p className="mt-2 text-xs text-gray-500">
               Verde = disponible · Rojo = ocupado. Hacé clic en un espacio verde para reservar.
             </p>
@@ -158,6 +192,16 @@ export default function WorkspaceAvailability() {
               <p className="text-sm text-gray-600 mb-3">
                 {selected.tipo} · Capacidad {selected.capacidad}
               </p>
+              {(selected.hourlyPrice != null || selected.dailyPrice != null || selected.monthlyPrice != null) && (
+                <div className="mb-3 rounded-lg bg-slate-50 p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Tarifas</p>
+                  <ul className="space-y-1 text-sm text-slate-700">
+                    {selected.hourlyPrice != null && <li>Por hora: {selected.currency} {selected.hourlyPrice.toLocaleString('es-AR')}</li>}
+                    {selected.dailyPrice != null && <li>Por día: {selected.currency} {selected.dailyPrice.toLocaleString('es-AR')}</li>}
+                    {selected.monthlyPrice != null && <li>Por mes: {selected.currency} {selected.monthlyPrice.toLocaleString('es-AR')}</li>}
+                  </ul>
+                </div>
+              )}
               <p className="text-sm text-gray-500 mb-3">
                 {date} {startTime} – {endTime}
               </p>

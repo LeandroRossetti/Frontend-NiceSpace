@@ -9,7 +9,7 @@ export default function WorkspaceEditorPage() {
       <Link to="/dashboard" className="text-sm text-indigo-600 hover:underline">
         ← Volver
       </Link>
-      <h1 className="text-2xl font-bold mt-2 mb-6">Editor de mapa</h1>
+      <h1 className="text-2xl font-bold mt-2 mb-6">Editor del edificio</h1>
       <MapEditor workspaceId={Number(id)} />
     </div>
   )

@@ -24,10 +24,23 @@ export interface WorkspaceDto {
 export interface SpaceResourceDto {
   id: number
   workspaceId: number
+  floorId: number
   nombre: string
   capacidad: number
   tipo: 'DESK' | 'ROOM'
   active: boolean
+  hourlyPrice: number | null
+  dailyPrice: number | null
+  monthlyPrice: number | null
+  currency: string
+}
+
+export interface FloorDto {
+  id: number
+  workspaceId: number
+  nombre: string
+  levelOrder: number
+  mapStructure: string | null
 }
 
 export type ReservationStatus = 'CONFIRMADA' | 'CANCELADA' | 'COMPLETADA'
@@ -57,13 +70,32 @@ export interface AvailabilityElement {
   y: number
   w: number
   h: number
+  rotation: number
   available: boolean
+  hourlyPrice: number | null
+  dailyPrice: number | null
+  monthlyPrice: number | null
+  currency: string
 }
 
 export interface AvailabilityResponse {
   workspaceId: number
   workspaceName: string
+  floorId: number
+  floorName: string
   elements: AvailabilityElement[]
+  objects: StaticMapObject[]
+}
+
+export interface StaticMapObject {
+  elementId: string
+  kind: 'wall' | 'door' | 'common-area'
+  label: string
+  x: number
+  y: number
+  w: number
+  h: number
+  rotation: number
 }
 
 export interface TeamDto {

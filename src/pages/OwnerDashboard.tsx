@@ -43,13 +43,13 @@ export default function OwnerDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Mis espacios</h1>
+      <h1 className="text-2xl font-bold mb-6">Mis edificios</h1>
 
       <form onSubmit={create} className="flex gap-2 mb-8">
         <input
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
-          placeholder="Nombre del espacio (ej. Piso 1)"
+          placeholder="Nombre del edificio"
           required
           className="flex-1 border border-gray-300 rounded-md px-3 py-2"
         />
@@ -58,7 +58,7 @@ export default function OwnerDashboard() {
           disabled={creating}
           className="bg-indigo-600 text-white rounded-md px-4 py-2 font-medium hover:bg-indigo-700 disabled:opacity-50"
         >
-          {creating ? 'Creando...' : 'Crear workspace'}
+          {creating ? 'Creando...' : 'Crear edificio'}
         </button>
       </form>
 
@@ -67,7 +67,7 @@ export default function OwnerDashboard() {
       {loading ? (
         <Spinner label="Cargando espacios..." />
       ) : workspaces.length === 0 ? (
-        <p className="text-gray-500">Todavía no creaste ningún espacio.</p>
+        <p className="text-gray-500">Todavía no creaste ningún edificio.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {workspaces.map((ws) => (
@@ -78,7 +78,7 @@ export default function OwnerDashboard() {
                   to={`/workspaces/${ws.id}/edit`}
                   className="text-sm bg-indigo-600 text-white rounded-md px-3 py-1.5 font-medium hover:bg-indigo-700"
                 >
-                  Editar mapa
+                  Administrar edificio
                 </Link>
                 <Link
                   to={`/workspaces/${ws.id}/reservations`}
