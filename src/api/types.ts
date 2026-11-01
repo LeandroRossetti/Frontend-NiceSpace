@@ -36,6 +36,7 @@ export interface LocationDto {
   description: string | null
   contactEmail: string | null
   contactPhone: string | null
+  imageUrl: string | null
   isActive: boolean
   createdAt: string
 }
@@ -151,6 +152,7 @@ export interface CreateLocationRequest {
   description?: string
   contactEmail?: string
   contactPhone?: string
+  imageUrl?: string
   isActive?: boolean
 }
 
