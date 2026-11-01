@@ -6,11 +6,11 @@ export default function WorkspaceEditorPage() {
 
   return (
     <div>
-      <Link to="/dashboard" className="text-sm text-indigo-600 hover:underline">
+      <Link to={`/dashboard/locations/${id}`} className="text-sm text-primary-700 hover:underline">
         ← Volver
       </Link>
-      <h1 className="text-2xl font-bold mt-2 mb-6">Editor del edificio</h1>
-      <MapEditor workspaceId={Number(id)} />
+      <h1 className="text-2xl font-bold mt-2 mb-6">Editor del plano</h1>
+      <MapEditor locationId={Number(id)} />
     </div>
   )
 }

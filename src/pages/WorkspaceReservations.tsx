@@ -6,8 +6,8 @@ import Spinner from '../components/Spinner'
 
 const STATUS_COLOR: Record<string, string> = {
   CONFIRMADA: 'bg-green-100 text-green-700',
-  CANCELADA: 'bg-red-100 text-red-700',
-  COMPLETADA: 'bg-gray-100 text-gray-600',
+  CANCELADA: 'bg-danger-500/10 text-danger-700',
+  COMPLETADA: 'bg-surface-muted text-muted-foreground',
 }
 
 export default function WorkspaceReservations() {
@@ -19,7 +19,7 @@ export default function WorkspaceReservations() {
 
   const load = () => {
     api
-      .get<ReservationDto[]>(`/reservations/workspace/${id}`)
+      .get<ReservationDto[]>(`/reservations/location/${id}`)
       .then(({ data }) => setReservations(data))
       .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setLoading(false))
@@ -44,26 +44,30 @@ export default function WorkspaceReservations() {
 
   return (
     <div>
-      <Link to="/dashboard" className="text-sm text-indigo-600 hover:underline">
+      <Link to={`/dashboard/locations/${id}`} className="text-sm text-primary-700 hover:underline">
         ← Volver
       </Link>
-      <h1 className="text-2xl font-bold mt-2 mb-6">Reservas del espacio</h1>
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      <h1 className="text-2xl font-bold mt-2 mb-6">Reservas de la sede</h1>
+      {error && <p className="text-sm text-danger-600 mb-4">{error}</p>}
 
       {reservations.length === 0 ? (
-        <p className="text-gray-500">No hay reservas en este espacio.</p>
+        <p className="text-muted-foreground">No hay reservas en esta sede.</p>
       ) : (
         <div className="space-y-3">
           {reservations.map((r) => (
-            <div key={r.id} className="border rounded-lg bg-white p-4 flex items-center justify-between">
+            <div key={r.id} className="border rounded-lg bg-surface p-4 flex items-center justify-between">
               <div>
                 <p className="font-medium">
-                  {r.resourceName} <span className="text-gray-400">·</span> {r.createdByName}
+                  {r.workspaceName} <span className="text-muted-foreground">·</span> {r.createdByName}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   {new Date(r.startTime).toLocaleString()} → {new Date(r.endTime).toLocaleString()}
                 </p>
-                {r.teamName && <p className="text-xs text-indigo-600">Equipo: {r.teamName}</p>}
+                <p className="text-xs text-muted-foreground">
+                  {r.rentalType === 'HORA' ? 'Por hora' : r.rentalType === 'DIA' ? 'Por día' : 'Por mes'}
+                  {r.totalPrice != null && <> · ARS {r.totalPrice.toLocaleString('es-AR')}</>}
+                </p>
+                {r.teamName && <p className="text-xs text-primary-700">Equipo: {r.teamName}</p>}
               </div>
               <div className="flex items-center gap-3">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLOR[r.status]}`}>
@@ -73,7 +77,7 @@ export default function WorkspaceReservations() {
                   <button
                     onClick={() => cancel(r.id)}
                     disabled={canceling === r.id}
-                    className="text-sm text-red-600 border border-red-200 rounded-md px-3 py-1 hover:bg-red-50 disabled:opacity-50"
+                    className="text-sm text-danger-600 border border-danger-600/20 rounded-md px-3 py-1 hover:bg-danger-500/10 disabled:opacity-50"
                   >
                     Cancelar
                   </button>

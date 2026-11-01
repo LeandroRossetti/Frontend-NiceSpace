@@ -1,20 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, getErrorMessage } from '../api/client'
-import type { WorkspaceDto } from '../api/types'
+import type { CreateLocationRequest, LocationDto } from '../api/types'
 import Spinner from '../components/Spinner'
+import LocationForm from '../components/LocationForm'
 
 export default function OwnerDashboard() {
-  const [workspaces, setWorkspaces] = useState<WorkspaceDto[]>([])
-  const [nombre, setNombre] = useState('')
+  const [locations, setLocations] = useState<LocationDto[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState('')
 
   const load = async () => {
     try {
-      const { data } = await api.get<WorkspaceDto[]>('/workspaces/mine')
-      setWorkspaces(data)
+      const { data } = await api.get<LocationDto[]>('/locations/mine')
+      setLocations(data)
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
@@ -26,13 +27,12 @@ export default function OwnerDashboard() {
     load()
   }, [])
 
-  const create = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const create = async (payload: CreateLocationRequest) => {
     setError('')
     setCreating(true)
     try {
-      await api.post('/workspaces', { nombre })
-      setNombre('')
+      await api.post('/locations', payload)
+      setShowForm(false)
       await load()
     } catch (err) {
       setError(getErrorMessage(err))
@@ -43,46 +43,50 @@ export default function OwnerDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Mis edificios</h1>
-
-      <form onSubmit={create} className="flex gap-2 mb-8">
-        <input
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          placeholder="Nombre del edificio"
-          required
-          className="flex-1 border border-gray-300 rounded-md px-3 py-2"
-        />
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Mis sedes</h1>
         <button
-          type="submit"
-          disabled={creating}
-          className="bg-indigo-600 text-white rounded-md px-4 py-2 font-medium hover:bg-indigo-700 disabled:opacity-50"
+          onClick={() => setShowForm((value) => !value)}
+          className="rounded-md bg-primary-700 px-4 py-2 text-sm font-medium text-white hover:bg-primary-800"
         >
-          {creating ? 'Creando...' : 'Crear edificio'}
+          {showForm ? 'Cancelar' : 'Crear sede'}
         </button>
-      </form>
+      </div>
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {showForm && (
+        <div className="mb-8 rounded-lg border border-border bg-surface p-4 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold">Nueva sede</h2>
+          <LocationForm submitLabel="Crear sede" submitting={creating} onSubmit={create} />
+        </div>
+      )}
+
+      {error && <p className="text-sm text-danger-600 mb-4">{error}</p>}
 
       {loading ? (
-        <Spinner label="Cargando espacios..." />
-      ) : workspaces.length === 0 ? (
-        <p className="text-gray-500">Todavía no creaste ningún edificio.</p>
+        <Spinner label="Cargando sedes..." />
+      ) : locations.length === 0 ? (
+        <p className="text-muted-foreground">Todavía no creaste ninguna sede.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {workspaces.map((ws) => (
-            <div key={ws.id} className="border rounded-lg bg-white p-4 shadow-sm">
-              <h2 className="text-lg font-semibold">{ws.nombre}</h2>
+          {locations.map((loc) => (
+            <div key={loc.id} className="border rounded-lg bg-surface p-4 shadow-sm">
+              <h2 className="text-lg font-semibold">{loc.nombre}</h2>
+              {(loc.address || loc.city) && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {[loc.address, loc.city].filter(Boolean).join(', ')}
+                </p>
+              )}
+              {!loc.isActive && <p className="text-xs text-amber-600 mt-1">Sede inactiva</p>}
               <div className="mt-4 flex gap-2">
                 <Link
-                  to={`/workspaces/${ws.id}/edit`}
-                  className="text-sm bg-indigo-600 text-white rounded-md px-3 py-1.5 font-medium hover:bg-indigo-700"
+                  to={`/dashboard/locations/${loc.id}`}
+                  className="text-sm bg-primary-700 text-white rounded-md px-3 py-1.5 font-medium hover:bg-primary-800"
                 >
-                  Administrar edificio
+                  Administrar
                 </Link>
                 <Link
-                  to={`/workspaces/${ws.id}/reservations`}
-                  className="text-sm border border-gray-300 rounded-md px-3 py-1.5 font-medium hover:bg-gray-50"
+                  to={`/dashboard/locations/${loc.id}/reservations`}
+                  className="text-sm border border-border rounded-md px-3 py-1.5 font-medium hover:bg-surface-muted"
                 >
                   Ver reservas
                 </Link>

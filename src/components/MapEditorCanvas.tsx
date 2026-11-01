@@ -2,9 +2,14 @@ import { useEffect, useRef } from 'react'
 import { Group, Layer, Line, Rect, Stage, Text, Transformer } from 'react-konva'
 import type { Group as KonvaGroup } from 'konva/lib/Group'
 import type { Transformer as KonvaTransformer } from 'konva/lib/shapes/Transformer'
+import type { WorkspaceType } from '../api/types'
 import { GRID_SIZE, type CanvasViewport, type EditorElement } from '../editor/types'
 
-const RESOURCE_COLOR: Record<'DESK' | 'ROOM', string> = { DESK: '#4f46e5', ROOM: '#0891b2' }
+const WORKSPACE_COLOR: Record<WorkspaceType, string> = {
+  HOT_DESK: '#4f46e5',
+  PRIVATE_OFFICE: '#0891b2',
+  MEETING_ROOM: '#7c3aed',
+}
 const SHAPE_COLOR: Record<'wall' | 'door' | 'common-area', string> = {
   wall: '#334155',
   door: '#b45309',
@@ -51,11 +56,11 @@ export default function MapEditorCanvas({
   }, [selectedIds, elements, panMode])
 
   return (
-    <div className="min-w-0 flex-1 overflow-auto rounded-xl border border-slate-200 bg-slate-100 p-3 shadow-sm">
+    <div className="min-w-0 flex-1 overflow-auto rounded-xl border border-border bg-surface-muted p-3 shadow-sm">
       <Stage
         width={1000}
         height={600}
-        className={`rounded-lg bg-white shadow-inner ${panMode ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        className={`rounded-lg bg-surface shadow-inner ${panMode ? 'cursor-grab active:cursor-grabbing' : ''}`}
         draggable={panMode}
         onDragEnd={(event) => {
           const stage = event.target.getStage()
@@ -149,9 +154,9 @@ export default function MapEditorCanvas({
               <Rect
                 width={element.w}
                 height={element.h}
-                fill={element.kind === 'resource' ? RESOURCE_COLOR[element.tipo] : SHAPE_COLOR[element.kind]}
+                fill={element.kind === 'workspace' ? WORKSPACE_COLOR[element.workspaceType] : SHAPE_COLOR[element.kind]}
                 opacity={element.kind === 'common-area' ? 0.45 : 0.9}
-                cornerRadius={element.kind === 'resource' || element.kind === 'common-area' ? 8 : 1}
+                cornerRadius={element.kind === 'workspace' || element.kind === 'common-area' ? 8 : 1}
                 stroke={selectedIds.includes(element.elementId) ? '#f59e0b' : element.kind === 'common-area' ? '#d97706' : '#334155'}
                 strokeWidth={selectedIds.includes(element.elementId) ? 3 : element.kind === 'wall' ? 1 : 2}
                 shadowColor="#0f172a"
@@ -159,14 +164,14 @@ export default function MapEditorCanvas({
                 shadowOpacity={0.15}
               />
               <Text
-                text={element.kind === 'resource'
-                  ? `${element.nombre}\n${element.capacidad} ${element.capacidad === 1 ? 'persona' : 'personas'}`
+                text={element.kind === 'workspace'
+                  ? `${element.nombre}\n${element.capacity} ${element.capacity === 1 ? 'persona' : 'personas'}`
                   : element.kind === 'wall' ? '' : element.label}
                 width={element.w}
                 height={element.h}
                 align="center"
                 verticalAlign="middle"
-                fontSize={element.kind === 'resource' ? 13 : 11}
+                fontSize={element.kind === 'workspace' ? 13 : 11}
                 fontStyle="bold"
                 fill={element.kind === 'common-area' ? '#78350f' : '#ffffff'}
                 padding={8}
@@ -185,7 +190,7 @@ export default function MapEditorCanvas({
           )}
         </Layer>
       </Stage>
-      <p className="px-1 pt-3 text-xs text-slate-500">Arrastrá los recursos para ubicarlos. Seleccioná uno para editar sus datos y tarifas.</p>
+      <p className="px-1 pt-3 text-xs text-muted-foreground">Arrastrá los espacios para ubicarlos. Seleccioná uno para editar sus datos y tarifas.</p>
     </div>
   )
 }

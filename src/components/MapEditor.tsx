@@ -1,23 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, getErrorMessage } from '../api/client'
-import type { FloorDto, SpaceResourceDto, WorkspaceDto } from '../api/types'
+import type { CreateWorkspaceRequest, FloorDto, LocationDto, WorkspaceDto, WorkspaceType } from '../api/types'
 import { GRID_SIZE } from '../editor/types'
 import type {
   CanvasViewport,
   EditorElement,
-  EditorResource,
-  ResourceDraft,
+  EditorWorkspace,
+  StaticElementDraft,
   StaticElementKind,
   StaticFloorElement,
 } from '../editor/types'
 import FloorSelector from './FloorSelector'
 import MapEditorCanvas from './MapEditorCanvas'
-import ResourcePropertiesPanel from './ResourcePropertiesPanel'
+import WorkspacePropertiesPanel from './WorkspacePropertiesPanel'
 import StaticElementPropertiesPanel from './StaticElementPropertiesPanel'
 import Spinner from './Spinner'
 
 interface MapElement {
-  resourceId: number
+  workspaceId: number
   x: number
   y: number
   w: number
@@ -30,68 +30,59 @@ interface MapPayload {
   objects?: StaticFloorElement[]
 }
 
-const EMPTY_DRAFT: ResourceDraft = {
+const DEFAULT_CAPACITY: Record<WorkspaceType, number> = {
+  HOT_DESK: 1,
+  PRIVATE_OFFICE: 4,
+  MEETING_ROOM: 6,
+}
+
+const EMPTY_STATIC_DRAFT: StaticElementDraft = {
   nombre: '',
-  capacidad: '1',
-  hourlyPrice: '',
-  dailyPrice: '',
-  monthlyPrice: '',
-  currency: 'ARS',
   width: '120',
   height: '70',
   rotation: '0',
 }
 
-function mapElements(floor: FloorDto, resources: SpaceResourceDto[]): EditorElement[] {
+function mapElements(floor: FloorDto, workspaces: WorkspaceDto[]): EditorElement[] {
   const payload: MapPayload = floor.mapStructure ? JSON.parse(floor.mapStructure) : { elements: [] }
-  const byId = new Map(resources.map((resource) => [resource.id, resource]))
-  const resourceElements = (payload.elements ?? []).flatMap((position) => {
-    const resource = byId.get(position.resourceId)
-    return resource ? [{
-      ...resource,
+  const byId = new Map(workspaces.map((workspace) => [workspace.id, workspace]))
+  const workspaceElements = (payload.elements ?? []).flatMap((position) => {
+    const workspace = byId.get(position.workspaceId)
+    return workspace ? [{
+      ...workspace,
       ...position,
-      kind: 'resource' as const,
-      elementId: `resource-${resource.id}`,
+      kind: 'workspace' as const,
+      elementId: `workspace-${workspace.id}`,
       rotation: position.rotation ?? 0,
     }] : []
   })
-  return [...resourceElements, ...(payload.objects ?? [])]
+  return [...workspaceElements, ...(payload.objects ?? [])]
 }
 
-function toPrice(value: string): number | null {
-  if (value.trim() === '') return null
-  const amount = Number(value)
-  return Number.isFinite(amount) && amount >= 0 ? amount : null
-}
-
-function draftFromResource(resource: EditorResource): ResourceDraft {
+function staticDraftFrom(element: StaticFloorElement): StaticElementDraft {
   return {
-    nombre: resource.nombre,
-    capacidad: String(resource.capacidad),
-    hourlyPrice: resource.hourlyPrice == null ? '' : String(resource.hourlyPrice),
-    dailyPrice: resource.dailyPrice == null ? '' : String(resource.dailyPrice),
-    monthlyPrice: resource.monthlyPrice == null ? '' : String(resource.monthlyPrice),
-    currency: resource.currency || 'ARS',
-    width: String(resource.w),
-    height: String(resource.h),
-    rotation: String(resource.rotation),
+    nombre: element.label,
+    width: String(element.w),
+    height: String(element.h),
+    rotation: String(element.rotation),
   }
 }
 
-export default function MapEditor({ workspaceId }: { workspaceId: number }) {
-  const [workspaceName, setWorkspaceName] = useState('')
+export default function MapEditor({ locationId }: { locationId: number }) {
+  const [locationName, setLocationName] = useState('')
   const [floors, setFloors] = useState<FloorDto[]>([])
   const [floorId, setFloorId] = useState<number | null>(null)
-  const [resources, setResources] = useState<SpaceResourceDto[]>([])
+  const [workspaces, setWorkspaces] = useState<WorkspaceDto[]>([])
   const [floorElements, setFloorElements] = useState<Record<number, EditorElement[]>>({})
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [draft, setDraft] = useState<ResourceDraft>(EMPTY_DRAFT)
+  const [staticDraft, setStaticDraft] = useState<StaticElementDraft>(EMPTY_STATIC_DRAFT)
   const [viewport, setViewport] = useState<CanvasViewport>({ x: 0, y: 0, scale: 1 })
   const [showGrid, setShowGrid] = useState(true)
   const [snapToGrid, setSnapToGrid] = useState(false)
   const [panMode, setPanMode] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingWorkspace, setSavingWorkspace] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
 
@@ -101,20 +92,20 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
       setLoading(true)
       setError('')
       try {
-        const [workspaceResponse, floorResponse, resourceResponse] = await Promise.all([
-          api.get<WorkspaceDto>(`/workspaces/${workspaceId}`),
-          api.get<FloorDto[]>(`/workspaces/${workspaceId}/floors`),
-          api.get<SpaceResourceDto[]>(`/workspaces/${workspaceId}/resources`),
+        const [locationResponse, floorResponse, workspaceResponse] = await Promise.all([
+          api.get<LocationDto>(`/locations/${locationId}`),
+          api.get<FloorDto[]>(`/locations/${locationId}/floors`),
+          api.get<WorkspaceDto[]>(`/locations/${locationId}/workspaces`),
         ])
         const loadedFloors = floorResponse.data
-        const loadedResources = resourceResponse.data
+        const loadedWorkspaces = workspaceResponse.data
         const documents = Object.fromEntries(
-          loadedFloors.map((floor) => [floor.id, mapElements(floor, loadedResources)]),
+          loadedFloors.map((floor) => [floor.id, mapElements(floor, loadedWorkspaces)]),
         )
         if (!cancelled) {
-          setWorkspaceName(workspaceResponse.data.nombre)
+          setLocationName(locationResponse.data.nombre)
           setFloors(loadedFloors)
-          setResources(loadedResources)
+          setWorkspaces(loadedWorkspaces)
           setFloorElements(documents)
           setFloorId(loadedFloors[0]?.id ?? null)
         }
@@ -128,13 +119,13 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
     return () => {
       cancelled = true
     }
-  }, [workspaceId])
+  }, [locationId])
 
   const elements = useMemo(() => (floorId == null ? [] : floorElements[floorId] ?? []), [floorElements, floorId])
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
   const selectedElement = selectedId == null ? null : elements.find((element) => element.elementId === selectedId) ?? null
-  const selectedResource = selectedElement?.kind === 'resource' ? selectedElement : null
-  const selectedStaticElement = selectedElement && selectedElement.kind !== 'resource' ? selectedElement : null
+  const selectedWorkspace = selectedElement?.kind === 'workspace' ? selectedElement : null
+  const selectedStaticElement = selectedElement && selectedElement.kind !== 'workspace' ? selectedElement : null
 
   const selectElement = (element: EditorElement, additive = false) => {
     if (additive) {
@@ -143,42 +134,63 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
         : [...selectedIds, element.elementId]
       setSelectedIds(next)
       const onlySelected = next.length === 1 ? elements.find((item) => item.elementId === next[0]) : undefined
-      setDraft(onlySelected?.kind === 'resource' ? draftFromResource(onlySelected) : EMPTY_DRAFT)
+      setStaticDraft(onlySelected && onlySelected.kind !== 'workspace' ? staticDraftFrom(onlySelected) : EMPTY_STATIC_DRAFT)
       return
     }
     setSelectedIds([element.elementId])
-    setDraft(element.kind === 'resource'
-      ? draftFromResource(element)
-      : { ...EMPTY_DRAFT, nombre: element.label, width: String(element.w), height: String(element.h), rotation: String(element.rotation) })
+    setStaticDraft(element.kind !== 'workspace' ? staticDraftFrom(element) : EMPTY_STATIC_DRAFT)
   }
 
-  const addResource = async (tipo: SpaceResourceDto['tipo']) => {
+  const persistMap = async (targetFloorId: number, snapshot: EditorElement[]) => {
+    setSaving(true)
+    setSaved(false)
+    setError('')
+    try {
+      const mapStructure = JSON.stringify({
+        elements: snapshot.flatMap((element) => element.kind === 'workspace'
+          ? [{ workspaceId: element.id, x: element.x, y: element.y, w: element.w, h: element.h, rotation: element.rotation }]
+          : []),
+        objects: snapshot.flatMap((element) => element.kind !== 'workspace'
+          ? [{ elementId: element.elementId, kind: element.kind, label: element.label, x: element.x, y: element.y, w: element.w, h: element.h, rotation: element.rotation }]
+          : []),
+      })
+      const { data } = await api.put<FloorDto>(`/floors/${targetFloorId}/map`, { mapStructure })
+      setFloors((previous) => previous.map((floor) => (floor.id === targetFloorId ? data : floor)))
+      setSaved(true)
+    } catch (saveError) {
+      setError(getErrorMessage(saveError))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const addWorkspace = async (tipo: WorkspaceType) => {
     if (floorId == null) return
     setError('')
-    const label = tipo === 'DESK' ? 'Escritorio' : 'Sala'
     try {
-      const { data } = await api.post<SpaceResourceDto>(`/workspaces/${workspaceId}/resources`, {
-        nombre: `${label} ${resources.filter((resource) => resource.tipo === tipo).length + 1}`,
-        capacidad: tipo === 'DESK' ? 1 : 6,
-        tipo,
-        active: true,
-        floorId,
+      const { data } = await api.post<WorkspaceDto>(`/locations/${locationId}/workspaces`, {
+        nombre: `Espacio ${workspaces.length + 1}`,
+        workspaceType: tipo,
+        capacity: DEFAULT_CAPACITY[tipo],
         currency: 'ARS',
+        floorId,
+        isActive: true,
       })
-      const element: EditorResource = {
+      const element: EditorWorkspace = {
         ...data,
-        kind: 'resource',
-        elementId: `resource-${data.id}`,
+        kind: 'workspace',
+        elementId: `workspace-${data.id}`,
         x: 40 + (elements.length % 6) * 35,
         y: 40 + (elements.length % 6) * 35,
-        w: tipo === 'DESK' ? 120 : 200,
-        h: tipo === 'DESK' ? 70 : 130,
+        w: tipo === 'HOT_DESK' ? 120 : 200,
+        h: tipo === 'HOT_DESK' ? 70 : 130,
         rotation: 0,
       }
-      setResources((previous) => [...previous, data])
+      const nextElements = [...elements, element]
+      setWorkspaces((previous) => [...previous, data])
       setFloorElements((previous) => ({ ...previous, [floorId]: [...(previous[floorId] ?? []), element] }))
       selectElement(element)
-      setSaved(false)
+      await persistMap(floorId, nextElements)
     } catch (addError) {
       setError(getErrorMessage(addError))
     }
@@ -208,7 +220,7 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
     setError('')
     try {
       const name = `Piso ${Math.max(0, ...floors.map((floor) => floor.levelOrder)) + 1}`
-      const { data } = await api.post<FloorDto>(`/workspaces/${workspaceId}/floors`, { nombre: name })
+      const { data } = await api.post<FloorDto>(`/locations/${locationId}/floors`, { nombre: name })
       setFloors((previous) => [...previous, data])
       setFloorElements((previous) => ({ ...previous, [data.id]: [] }))
       setFloorId(data.id)
@@ -223,7 +235,7 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
     if (floorId == null || floors.length <= 1) return
     const floor = floors.find((item) => item.id === floorId)
     if ((floorElements[floorId] ?? []).length > 0) {
-      setError('Mové o eliminá los elementos del piso antes de eliminarlo.')
+      setError('Mové o eliminá los espacios del piso antes de eliminarlo.')
       return
     }
     if (!floor || !window.confirm(`¿Eliminar ${floor.nombre}? Esta acción no se puede deshacer.`)) return
@@ -247,83 +259,51 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
 
   const saveMap = async () => {
     if (floorId == null) return
-    setSaving(true)
-    setSaved(false)
-    setError('')
-    try {
-      const mapStructure = JSON.stringify({
-        elements: elements.flatMap((element) => element.kind === 'resource'
-          ? [{ resourceId: element.id, x: element.x, y: element.y, w: element.w, h: element.h, rotation: element.rotation }]
-          : []),
-        objects: elements.flatMap((element) => element.kind !== 'resource'
-          ? [{ elementId: element.elementId, kind: element.kind, label: element.label, x: element.x, y: element.y, w: element.w, h: element.h, rotation: element.rotation }]
-          : []),
-      })
-      const { data } = await api.put<FloorDto>(`/floors/${floorId}/map`, { mapStructure })
-      setFloors((previous) => previous.map((floor) => (floor.id === floorId ? data : floor)))
-      setSaved(true)
-    } catch (saveError) {
-      setError(getErrorMessage(saveError))
-    } finally {
-      setSaving(false)
-    }
+    await persistMap(floorId, elements)
   }
 
-  const saveResource = async () => {
-    if (!selectedResource) return
-    const capacity = Number(draft.capacidad)
-    const width = Number(draft.width)
-    const height = Number(draft.height)
-    const rotation = Number(draft.rotation)
-    if (!draft.nombre.trim() || !Number.isInteger(capacity) || capacity < 1) {
-      setError('Ingresá un nombre y una capacidad válida.')
-      return
-    }
-    if (![width, height, rotation].every(Number.isFinite) || width < 20 || height < 20) {
-      setError('Las dimensiones deben ser de al menos 20 unidades y la rotación debe ser válida.')
-      return
-    }
-    const prices = [draft.hourlyPrice, draft.dailyPrice, draft.monthlyPrice]
-    if (prices.some((price) => price.trim() !== '' && toPrice(price) == null)) {
-      setError('Las tarifas deben ser importes válidos y no negativos.')
-      return
-    }
+  const updateWorkspace = async (payload: CreateWorkspaceRequest) => {
+    if (!selectedWorkspace) return
+    setSavingWorkspace(true)
     setError('')
     try {
-      const { data } = await api.put<SpaceResourceDto>(`/resources/${selectedResource.id}`, {
-        nombre: draft.nombre.trim(),
-        capacidad: capacity,
-        tipo: selectedResource.tipo,
-        active: selectedResource.active,
-        floorId: selectedResource.floorId,
-        hourlyPrice: toPrice(draft.hourlyPrice),
-        dailyPrice: toPrice(draft.dailyPrice),
-        monthlyPrice: toPrice(draft.monthlyPrice),
-        currency: draft.currency,
-      })
-      setResources((previous) => previous.map((resource) => (resource.id === data.id ? data : resource)))
+      const { data } = await api.put<WorkspaceDto>(`/workspaces/${selectedWorkspace.id}`, payload)
+      setWorkspaces((previous) => previous.map((workspace) => (workspace.id === data.id ? data : workspace)))
       setFloorElements((previous) => Object.fromEntries(
         Object.entries(previous).map(([id, floorItems]) => [
           id,
-          floorItems.map((item) => item.kind === 'resource' && item.id === data.id ? { ...item, ...data, w: width, h: height, rotation } : item),
+          floorItems.map((item) => item.kind === 'workspace' && item.id === data.id ? { ...item, ...data } : item),
         ]),
       ))
       setSaved(false)
     } catch (saveError) {
       setError(getErrorMessage(saveError))
+    } finally {
+      setSavingWorkspace(false)
     }
   }
 
-  const removeResource = async () => {
-    if (!selectedResource || !window.confirm(`¿Eliminar ${selectedResource.nombre}?`)) return
+  const handleWorkspaceGeometryChange = (changes: { w: number; h: number; rotation: number }) => {
+    if (!selectedWorkspace || floorId == null) return
+    setFloorElements((previous) => ({
+      ...previous,
+      [floorId]: (previous[floorId] ?? []).map((item) => item.elementId === selectedWorkspace.elementId
+        ? { ...item, w: changes.w, h: changes.h, rotation: changes.rotation }
+        : item),
+    }))
+    setSaved(false)
+  }
+
+  const removeWorkspace = async () => {
+    if (!selectedWorkspace || !window.confirm(`¿Eliminar ${selectedWorkspace.nombre}?`)) return
     setError('')
     try {
-      await api.delete(`/resources/${selectedResource.id}`)
-      setResources((previous) => previous.filter((resource) => resource.id !== selectedResource.id))
+      await api.delete(`/workspaces/${selectedWorkspace.id}`)
+      setWorkspaces((previous) => previous.filter((workspace) => workspace.id !== selectedWorkspace.id))
       setFloorElements((previous) => Object.fromEntries(
         Object.entries(previous).map(([id, floorItems]) => [
           id,
-          floorItems.filter((item) => item.kind !== 'resource' || item.id !== selectedResource.id),
+          floorItems.filter((item) => item.kind !== 'workspace' || item.id !== selectedWorkspace.id),
         ]),
       ))
       setSelectedIds([])
@@ -335,17 +315,17 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
 
   const saveStaticElement = () => {
     if (!selectedStaticElement || floorId == null) return
-    const width = Number(draft.width)
-    const height = Number(draft.height)
-    const rotation = Number(draft.rotation)
-    if (!draft.nombre.trim() || ![width, height, rotation].every(Number.isFinite) || width < 8 || height < 8) {
+    const width = Number(staticDraft.width)
+    const height = Number(staticDraft.height)
+    const rotation = Number(staticDraft.rotation)
+    if (!staticDraft.nombre.trim() || ![width, height, rotation].every(Number.isFinite) || width < 8 || height < 8) {
       setError('Ingresá un nombre, dimensiones válidas y una rotación válida.')
       return
     }
     setFloorElements((previous) => ({
       ...previous,
       [floorId]: (previous[floorId] ?? []).map((item) => item.elementId === selectedStaticElement.elementId
-        ? { ...item, label: draft.nombre.trim(), w: width, h: height, rotation }
+        ? { ...item, label: staticDraft.nombre.trim(), w: width, h: height, rotation }
         : item),
     }))
     setSaved(false)
@@ -366,31 +346,34 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
 
   return (
     <section className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <header className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface p-4 shadow-sm">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Editor de edificio</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-900">{workspaceName}</h2>
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary-700">Editor de sede</p>
+          <h2 className="mt-1 text-xl font-semibold text-foreground">{locationName}</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => void addResource('DESK')} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-            + Escritorio
+          <button onClick={() => void addWorkspace('HOT_DESK')} className="rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800">
+            + Hot desk
           </button>
-          <button onClick={() => void addResource('ROOM')} className="rounded-lg bg-cyan-700 px-3 py-2 text-sm font-medium text-white hover:bg-cyan-800">
-            + Sala
+          <button onClick={() => void addWorkspace('PRIVATE_OFFICE')} className="rounded-lg bg-cyan-700 px-3 py-2 text-sm font-medium text-white hover:bg-cyan-800">
+            + Oficina privada
           </button>
-          <button onClick={() => addStaticElement('wall')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          <button onClick={() => void addWorkspace('MEETING_ROOM')} className="rounded-lg bg-violet-700 px-3 py-2 text-sm font-medium text-white hover:bg-violet-800">
+            + Sala de reuniones
+          </button>
+          <button onClick={() => addStaticElement('wall')} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-muted">
             + Pared
           </button>
-          <button onClick={() => addStaticElement('door')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          <button onClick={() => addStaticElement('door')} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-muted">
             + Puerta
           </button>
-          <button onClick={() => addStaticElement('common-area')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          <button onClick={() => addStaticElement('common-area')} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-muted">
             + Zona común
           </button>
-          <button onClick={() => void saveMap()} disabled={saving || floorId == null} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
+          <button onClick={() => void saveMap()} disabled={saving || floorId == null} className="rounded-lg bg-success-600 px-3 py-2 text-sm font-medium text-white hover:bg-success-700 disabled:opacity-50">
             {saving ? 'Guardando…' : 'Guardar plano'}
           </button>
-          {saved && <span className="text-sm font-medium text-emerald-700">Guardado</span>}
+          {saved && <span className="text-sm font-medium text-success-700">Guardado</span>}
         </div>
       </header>
 
@@ -406,23 +389,23 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
         onDelete={() => void deleteFloor()}
       />
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2">
         <div className="flex items-center gap-1" aria-label="Zoom del plano">
-          <button onClick={() => setViewport((view) => ({ ...view, scale: Math.max(0.25, view.scale / 1.2) }))} className="h-8 w-8 rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50" aria-label="Alejar">−</button>
-          <span className="min-w-12 text-center text-xs font-medium text-slate-600">{Math.round(viewport.scale * 100)}%</span>
-          <button onClick={() => setViewport((view) => ({ ...view, scale: Math.min(3, view.scale * 1.2) }))} className="h-8 w-8 rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50" aria-label="Acercar">+</button>
-          <button onClick={() => setViewport({ x: 0, y: 0, scale: 1 })} className="rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100">Ajustar</button>
+          <button onClick={() => setViewport((view) => ({ ...view, scale: Math.max(0.25, view.scale / 1.2) }))} className="h-8 w-8 rounded-md border border-border text-foreground hover:bg-surface-muted" aria-label="Alejar">−</button>
+          <span className="min-w-12 text-center text-xs font-medium text-muted-foreground">{Math.round(viewport.scale * 100)}%</span>
+          <button onClick={() => setViewport((view) => ({ ...view, scale: Math.min(3, view.scale * 1.2) }))} className="h-8 w-8 rounded-md border border-border text-foreground hover:bg-surface-muted" aria-label="Acercar">+</button>
+          <button onClick={() => setViewport({ x: 0, y: 0, scale: 1 })} className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-surface-muted">Ajustar</button>
         </div>
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          <input type="checkbox" checked={showGrid} onChange={(event) => setShowGrid(event.target.checked)} className="accent-indigo-600" />
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input type="checkbox" checked={showGrid} onChange={(event) => setShowGrid(event.target.checked)} className="accent-primary-700" />
           Cuadrícula
         </label>
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          <input type="checkbox" checked={snapToGrid} onChange={(event) => setSnapToGrid(event.target.checked)} className="accent-indigo-600" />
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input type="checkbox" checked={snapToGrid} onChange={(event) => setSnapToGrid(event.target.checked)} className="accent-primary-700" />
           Ajustar a cuadrícula
         </label>
-        {snapToGrid && <span className="text-xs text-slate-500">Al soltar: cada {GRID_SIZE} unidades</span>}
-        <button onClick={() => setPanMode((value) => !value)} aria-pressed={panMode} className={`rounded-md px-3 py-1.5 text-sm font-medium ${panMode ? 'bg-indigo-100 text-indigo-800' : 'text-slate-600 hover:bg-slate-100'}`}>
+        {snapToGrid && <span className="text-xs text-muted-foreground">Al soltar: cada {GRID_SIZE} unidades</span>}
+        <button onClick={() => setPanMode((value) => !value)} aria-pressed={panMode} className={`rounded-md px-3 py-1.5 text-sm font-medium ${panMode ? 'bg-primary-100 text-primary-800' : 'text-muted-foreground hover:bg-surface-muted'}`}>
           {panMode ? 'Desplazamiento activo' : 'Desplazar plano'}
         </button>
       </div>
@@ -432,8 +415,8 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
       <div className="flex flex-col gap-4 xl:flex-row">
         <div className="min-w-0 flex-1 space-y-2">
           {selectedIds.length > 1 && floorId != null && (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
-              <span className="self-center px-2 text-xs font-medium text-slate-600">{selectedIds.length} seleccionados</span>
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2 shadow-sm">
+              <span className="self-center px-2 text-xs font-medium text-muted-foreground">{selectedIds.length} seleccionados</span>
               <button
                 onClick={() => {
                   const selected = elements.filter((item) => selectedIds.includes(item.elementId))
@@ -445,7 +428,7 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
                   }))
                   setSaved(false)
                 }}
-                className="rounded-md px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                className="rounded-md px-2 py-1 text-xs text-foreground hover:bg-surface-muted"
               >
                 Alinear izquierda
               </button>
@@ -460,7 +443,7 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
                   }))
                   setSaved(false)
                 }}
-                className="rounded-md px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                className="rounded-md px-2 py-1 text-xs text-foreground hover:bg-surface-muted"
               >
                 Alinear arriba
               </button>
@@ -472,7 +455,7 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
             onSelect={selectElement}
             onClearSelection={() => {
               setSelectedIds([])
-              setDraft(EMPTY_DRAFT)
+              setStaticDraft(EMPTY_STATIC_DRAFT)
             }}
             viewport={viewport}
             onViewportChange={setViewport}
@@ -505,28 +488,29 @@ export default function MapEditor({ workspaceId }: { workspaceId: number }) {
                 ...previous,
                 [floorId]: (previous[floorId] ?? []).map((item) => item.elementId === elementId ? { ...item, ...next } : item),
               }))
-              if (selectedId === elementId) {
-                setDraft((current) => ({ ...current, width: String(Math.round(next.w)), height: String(Math.round(next.h)), rotation: String(Math.round(next.rotation)) }))
+              if (selectedId === elementId && selectedElement && selectedElement.kind !== 'workspace') {
+                setStaticDraft((current) => ({ ...current, width: String(Math.round(next.w)), height: String(Math.round(next.h)), rotation: String(Math.round(next.rotation)) }))
               }
               setSaved(false)
             }}
             />
         </div>
 
-        {selectedResource && (
-          <ResourcePropertiesPanel
-            resource={selectedResource}
-            draft={draft}
-            onDraftChange={setDraft}
-            onSave={() => void saveResource()}
-            onDelete={() => void removeResource()}
+        {selectedWorkspace && (
+          <WorkspacePropertiesPanel
+            key={selectedWorkspace.id}
+            workspace={selectedWorkspace}
+            saving={savingWorkspace}
+            onSave={(payload) => void updateWorkspace(payload)}
+            onGeometryChange={handleWorkspaceGeometryChange}
+            onDelete={() => void removeWorkspace()}
           />
         )}
         {selectedStaticElement && (
           <StaticElementPropertiesPanel
             element={selectedStaticElement}
-            draft={draft}
-            onDraftChange={setDraft}
+            draft={staticDraft}
+            onDraftChange={setStaticDraft}
             onSave={saveStaticElement}
             onDelete={removeStaticElement}
           />

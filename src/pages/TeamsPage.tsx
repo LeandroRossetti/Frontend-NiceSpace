@@ -107,17 +107,17 @@ export default function TeamsPage() {
           onChange={(e) => setNombre(e.target.value)}
           placeholder="Nombre del equipo (ej. Startup Demo)"
           required
-          className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+          className="flex-1 border border-border rounded-md px-3 py-2"
         />
         <button
           type="submit"
-          className="bg-indigo-600 text-white rounded-md px-4 py-2 font-medium hover:bg-indigo-700"
+          className="bg-primary-700 text-white rounded-md px-4 py-2 font-medium hover:bg-primary-800"
         >
           Crear equipo
         </button>
       </form>
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {error && <p className="text-sm text-danger-600 mb-4">{error}</p>}
       {message && <p className="text-sm text-green-600 mb-4">{message}</p>}
 
       {invitations.length > 0 && (
@@ -125,7 +125,7 @@ export default function TeamsPage() {
           <h2 className="text-lg font-semibold mb-3">Invitaciones pendientes</h2>
           <div className="space-y-2">
             {invitations.map((inv) => (
-              <div key={inv.id} className="border rounded-lg bg-white p-3 flex items-center justify-between">
+              <div key={inv.id} className="border rounded-lg bg-surface p-3 flex items-center justify-between">
                 <span className="text-sm">
                   Te invitaron al equipo <span className="font-medium">{inv.teamName}</span>
                 </span>
@@ -138,7 +138,7 @@ export default function TeamsPage() {
                   </button>
                   <button
                     onClick={() => decline(inv.token)}
-                    className="text-sm border border-gray-300 rounded-md px-3 py-1 hover:bg-gray-50"
+                    className="text-sm border border-border rounded-md px-3 py-1 hover:bg-surface-muted"
                   >
                     Rechazar
                   </button>
@@ -151,21 +151,21 @@ export default function TeamsPage() {
 
       <h2 className="text-lg font-semibold mb-3">Mis equipos</h2>
       {teams.length === 0 ? (
-        <p className="text-gray-500">No pertenecés a ningún equipo.</p>
+        <p className="text-muted-foreground">No pertenecés a ningún equipo.</p>
       ) : (
         <div className="space-y-3">
           {teams.map((t) => (
-            <div key={t.id} className="border rounded-lg bg-white p-4">
+            <div key={t.id} className="border rounded-lg bg-surface p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="font-medium">{t.nombre}</span>
-                  <span className="ml-2 text-xs bg-indigo-100 text-indigo-700 rounded-full px-2 py-0.5">
+                  <span className="ml-2 text-xs bg-primary-100 text-primary-800 rounded-full px-2 py-0.5">
                     {t.myRole === 'OWNER' ? 'Dueño' : 'Miembro'}
                   </span>
                 </div>
                 <button
                   onClick={() => toggle(t.id)}
-                  className="text-sm text-indigo-600 hover:underline"
+                  className="text-sm text-primary-700 hover:underline"
                 >
                   {expanded === t.id ? 'Ocultar' : 'Gestionar'}
                 </button>
@@ -173,11 +173,11 @@ export default function TeamsPage() {
 
               {expanded === t.id && (
                 <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-600 mb-2">Miembros</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Miembros</h4>
                   <ul className="space-y-1 mb-4">
                     {(members[t.id] ?? []).map((m) => (
-                      <li key={m.userId} className="text-sm text-gray-700">
-                        {m.nombre} <span className="text-gray-400">({m.email})</span>
+                      <li key={m.userId} className="text-sm text-foreground">
+                        {m.nombre} <span className="text-muted-foreground">({m.email})</span>
                       </li>
                     ))}
                   </ul>
@@ -189,11 +189,11 @@ export default function TeamsPage() {
                         onChange={(e) => setInviteEmail((prev) => ({ ...prev, [t.id]: e.target.value }))}
                         placeholder="Email del invitado"
                         type="email"
-                        className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                        className="flex-1 border border-border rounded-md px-3 py-2"
                       />
                       <button
                         onClick={() => invite(t.id)}
-                        className="bg-indigo-600 text-white rounded-md px-3 py-2 text-sm font-medium hover:bg-indigo-700"
+                        className="bg-primary-700 text-white rounded-md px-3 py-2 text-sm font-medium hover:bg-primary-800"
                       >
                         Invitar
                       </button>
