@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import ThemeToggle from './ThemeToggle'
 
 export default function Layout() {
   const user = useAuthStore((s) => s.user)
@@ -13,15 +14,15 @@ export default function Layout() {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 rounded-md text-sm font-medium ${
-      isActive ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-100'
+      isActive ? 'bg-primary-100 text-primary-800' : 'text-foreground hover:bg-surface-muted'
     }`
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-surface border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="text-lg font-bold text-indigo-700">
-            Cowork Spaces
+          <Link to="/" className="text-lg font-bold text-primary-800">
+            OpenSpot
           </Link>
           {user && (
             <nav className="flex items-center gap-1">
@@ -44,10 +45,11 @@ export default function Layout() {
                   </NavLink>
                 </>
               )}
-              <span className="ml-3 text-sm text-gray-500">{user.nombre}</span>
+              <span className="ml-3 text-sm text-muted-foreground">{user.nombre}</span>
+              <ThemeToggle />
               <button
                 onClick={handleLogout}
-                className="ml-2 px-3 py-2 rounded-md text-sm font-medium text-red-600 hover:bg-red-50"
+                className="ml-2 px-3 py-2 rounded-md text-sm font-medium text-danger-600 hover:bg-danger-500/10"
               >
                 Salir
               </button>

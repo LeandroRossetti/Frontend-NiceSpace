@@ -12,32 +12,60 @@ export interface AuthResponse {
   user: UserDto
 }
 
-export interface WorkspaceDto {
+export interface AmenityDto {
+  id: number
+  nombre: string
+  icono: string | null
+}
+
+export type WorkspaceType = 'HOT_DESK' | 'PRIVATE_OFFICE' | 'MEETING_ROOM'
+
+export type RentalType = 'HORA' | 'DIA' | 'MES'
+
+export interface LocationDto {
   id: number
   nombre: string
   ownerId: number
   ownerName: string
-  mapStructure: string | null
+  address: string | null
+  city: string | null
+  province: string | null
+  zipCode: string | null
+  latitude: number | null
+  longitude: number | null
+  description: string | null
+  contactEmail: string | null
+  contactPhone: string | null
+  isActive: boolean
   createdAt: string
 }
 
-export interface SpaceResourceDto {
+export interface WorkspaceDto {
   id: number
-  workspaceId: number
-  floorId: number
   nombre: string
-  capacidad: number
-  tipo: 'DESK' | 'ROOM'
-  active: boolean
-  hourlyPrice: number | null
-  dailyPrice: number | null
-  monthlyPrice: number | null
+  locationId: number
+  locationName: string
+  city: string | null
+  province: string | null
+  address: string | null
+  floorId: number | null
+  workspaceType: WorkspaceType
+  capacity: number
+  pricePerHour: number | null
+  pricePerDay: number | null
+  pricePerMonth: number | null
+  maxHours: number
+  maxDays: number
+  maxMonths: number
   currency: string
+  isActive: boolean
+  createdAt: string
+  amenities: AmenityDto[]
 }
 
 export interface FloorDto {
   id: number
-  workspaceId: number
+  locationId: number
   nombre: string
   levelOrder: number
   mapStructure: string | null
@@ -47,11 +75,13 @@ export type ReservationStatus = 'CONFIRMADA' | 'CANCELADA' | 'COMPLETADA'
 
 export interface ReservationDto {
   id: number
-  resourceId: number
-  resourceName: string
-  resourceType: string
   workspaceId: number
   workspaceName: string
+  workspaceType: string
+  locationId: number
+  locationName: string
+  rentalType: RentalType
+  totalPrice: number | null
   startTime: string
   endTime: string
   status: ReservationStatus
@@ -62,27 +92,39 @@ export interface ReservationDto {
 }
 
 export interface AvailabilityElement {
-  resourceId: number
+  workspaceId: number
   nombre: string
-  capacidad: number
-  tipo: 'DESK' | 'ROOM'
+  workspaceType: WorkspaceType
+  capacity: number
   x: number
   y: number
   w: number
   h: number
   rotation: number
   available: boolean
-  hourlyPrice: number | null
-  dailyPrice: number | null
-  monthlyPrice: number | null
+  pricePerHour: number | null
+  pricePerDay: number | null
+  pricePerMonth: number | null
+  maxHours: number
+  maxDays: number
+  maxMonths: number
   currency: string
+  amenities: AmenityDto[]
 }
 
 export interface AvailabilityResponse {
-  workspaceId: number
-  workspaceName: string
+  locationId: number
+  locationName: string
   floorId: number
   floorName: string
+  address: string | null
+  city: string | null
+  province: string | null
+  zipCode: string | null
+  description: string | null
+  contactEmail: string | null
+  contactPhone: string | null
+  isActive: boolean
   elements: AvailabilityElement[]
   objects: StaticMapObject[]
 }
@@ -96,6 +138,48 @@ export interface StaticMapObject {
   w: number
   h: number
   rotation: number
+}
+
+export interface CreateLocationRequest {
+  nombre: string
+  address?: string
+  city?: string
+  province?: string
+  zipCode?: string
+  latitude?: number | null
+  longitude?: number | null
+  description?: string
+  contactEmail?: string
+  contactPhone?: string
+  isActive?: boolean
+}
+
+export type UpdateLocationRequest = CreateLocationRequest
+
+export interface CreateWorkspaceRequest {
+  nombre: string
+  workspaceType: WorkspaceType
+  capacity: number
+  pricePerHour?: number | null
+  pricePerDay?: number | null
+  pricePerMonth?: number | null
+  maxHours?: number
+  maxDays?: number
+  maxMonths?: number
+  currency?: string
+  isActive?: boolean
+  floorId?: number | null
+  amenityIds?: number[]
+}
+
+export type WorkspaceUpdateRequest = CreateWorkspaceRequest
+
+export interface CreateReservationRequest {
+  workspaceId: number
+  startTime: string
+  endTime: string
+  rentalType: RentalType
+  teamId?: number | null
 }
 
 export interface TeamDto {

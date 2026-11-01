@@ -18,7 +18,7 @@ export default function MapCanvas({ elements, objects, onSelect }: Props) {
   const height = 600
 
   return (
-    <Stage width={width} height={height} className="border rounded-lg bg-white">
+    <Stage width={width} height={height} className="border rounded-lg bg-surface">
       <Layer>
           <Rect x={0} y={0} width={width} height={height} fill="#f1f5f9" />
           {objects.map((object) => (
@@ -39,7 +39,7 @@ export default function MapCanvas({ elements, objects, onSelect }: Props) {
           ))}
         {elements.map((el) => (
           <Group
-            key={el.resourceId}
+            key={el.workspaceId}
             x={el.x}
             y={el.y}
             rotation={el.rotation}
@@ -63,7 +63,7 @@ export default function MapCanvas({ elements, objects, onSelect }: Props) {
               strokeWidth={1}
             />
             <Text
-              text={`${el.nombre}\n(${el.capacidad})`}
+              text={`${el.nombre}\n(${el.capacity})`}
               width={el.w}
               height={el.h}
               align="center"

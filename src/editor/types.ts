@@ -1,9 +1,9 @@
-import type { SpaceResourceDto } from '../api/types'
+import type { WorkspaceDto } from '../api/types'
 
 export const GRID_SIZE = 50
 
-export interface EditorResource extends SpaceResourceDto {
-  kind: 'resource'
+export interface EditorWorkspace extends WorkspaceDto {
+  kind: 'workspace'
   elementId: string
   x: number
   y: number
@@ -25,15 +25,10 @@ export interface StaticFloorElement {
   rotation: number
 }
 
-export type EditorElement = EditorResource | StaticFloorElement
+export type EditorElement = EditorWorkspace | StaticFloorElement
 
-export interface ResourceDraft {
+export interface StaticElementDraft {
   nombre: string
-  capacidad: string
-  hourlyPrice: string
-  dailyPrice: string
-  monthlyPrice: string
-  currency: string
   width: string
   height: string
   rotation: string
