@@ -98,6 +98,11 @@ export default function LocationDetail() {
             </button>
           </div>
           {location.description && <p className="mt-3 text-sm text-foreground whitespace-pre-line">{location.description}</p>}
+          {location.amenities.length > 0 && (
+            <div className="mt-3">
+              <AmenityChips amenities={location.amenities} />
+            </div>
+          )}
           {editingLocation && (
             <div className="mt-4 border-t border-border pt-4">
               <LocationForm initial={location} submitLabel="Guardar sede" submitting={savingLocation} onSubmit={updateLocation} />
@@ -127,9 +132,6 @@ export default function LocationDetail() {
                 {formatPrice(ws.pricePerHour, ws.currency) && <div>Hora: {formatPrice(ws.pricePerHour, ws.currency)}</div>}
                 {formatPrice(ws.pricePerDay, ws.currency) && <div>Día: {formatPrice(ws.pricePerDay, ws.currency)}</div>}
                 {formatPrice(ws.pricePerMonth, ws.currency) && <div>Mes: {formatPrice(ws.pricePerMonth, ws.currency)}</div>}
-              </div>
-              <div className="mt-3">
-                <AmenityChips amenities={ws.amenities} />
               </div>
               {!ws.isActive && <p className="text-xs text-amber-600 mt-2">Espacio inactivo</p>}
             </div>

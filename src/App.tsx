@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import OwnerDashboard from './pages/OwnerDashboard'
 import LocationDetail from './pages/LocationDetail'
-import BrowseWorkspaces from './pages/BrowseWorkspaces'
+import BrowseLocations from './pages/BrowseLocations'
 import WorkspaceAvailability from './pages/WorkspaceAvailability'
 import WorkspaceEditorPage from './pages/WorkspaceEditorPage'
 import WorkspaceReservations from './pages/WorkspaceReservations'
@@ -17,7 +17,7 @@ import Landing from './pages/Landing'
 function HomeRedirect() {
   const user = useAuthStore((s) => s.user)
   if (!user) return <Navigate to="/login" replace />
-  return <Navigate to={user.accountType === 'OWNER' ? '/dashboard' : '/workspaces'} replace />
+  return <Navigate to={user.accountType === 'OWNER' ? '/dashboard' : '/locations'} replace />
 }
 
 export default function App() {
@@ -67,7 +67,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/workspaces" element={<BrowseWorkspaces />} />
+          <Route path="/locations" element={<BrowseLocations />} />
           <Route path="/locations/:id" element={<WorkspaceAvailability />} />
           <Route
             path="/reservations"
