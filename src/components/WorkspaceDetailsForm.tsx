@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import type { CreateWorkspaceRequest, WorkspaceDto, WorkspaceType } from '../api/types'
-import AmenitySelector from './AmenitySelector'
 
 const WORKSPACE_TYPE_OPTIONS: { value: WorkspaceType; label: string }[] = [
   { value: 'HOT_DESK', label: 'Hot desk' },
@@ -38,7 +37,6 @@ export default function WorkspaceDetailsForm({ initial, submitLabel, submitting,
   const [maxMonths, setMaxMonths] = useState(String(initial?.maxMonths ?? 12))
   const [currency, setCurrency] = useState(initial?.currency ?? 'ARS')
   const [isActive, setIsActive] = useState(initial?.isActive ?? true)
-  const [amenityIds, setAmenityIds] = useState<number[]>(initial?.amenities.map((amenity) => amenity.id) ?? [])
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -54,7 +52,6 @@ export default function WorkspaceDetailsForm({ initial, submitLabel, submitting,
     setMaxMonths(String(initial.maxMonths))
     setCurrency(initial.currency)
     setIsActive(initial.isActive)
-    setAmenityIds(initial.amenities.map((amenity) => amenity.id))
   }, [initial])
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -83,7 +80,6 @@ export default function WorkspaceDetailsForm({ initial, submitLabel, submitting,
       maxMonths: toIntOr(maxMonths, 12),
       currency,
       isActive,
-      amenityIds,
     })
   }
 
@@ -142,8 +138,6 @@ export default function WorkspaceDetailsForm({ initial, submitLabel, submitting,
           </div>
         </div>
       </div>
-
-      <AmenitySelector selected={amenityIds} onChange={setAmenityIds} />
 
       <label className="flex items-center gap-2 text-sm text-muted-foreground">
         <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="accent-primary-700" />

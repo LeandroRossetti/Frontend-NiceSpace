@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, getErrorMessage } from '../api/client'
-import type { AvailabilityElement, AvailabilityResponse, FloorDto, RentalType, TeamDto, WorkspaceType } from '../api/types'
+import type { AvailabilityElement, AvailabilityResponse, FloorDto, LocationDto, RentalType, TeamDto, WorkspaceType } from '../api/types'
 import MapCanvas from '../components/MapCanvas'
 import Spinner from '../components/Spinner'
+import AmenityChips from '../components/AmenityChips'
 
 const TYPE_LABEL: Record<WorkspaceType, string> = {
   HOT_DESK: 'Hot desk',
@@ -41,6 +42,7 @@ export default function WorkspaceAvailability() {
   const { id } = useParams()
   const locationId = Number(id)
 
+  const [location, setLocation] = useState<LocationDto | null>(null)
   const [date, setDate] = useState('')
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('11:00')
@@ -56,6 +58,13 @@ export default function WorkspaceAvailability() {
   const [teamId, setTeamId] = useState<number | ''>('')
   const [reserving, setReserving] = useState(false)
   const [success, setSuccess] = useState('')
+
+  useEffect(() => {
+    api
+      .get<LocationDto>(`/locations/${locationId}`)
+      .then(({ data }) => setLocation(data))
+      .catch((err) => setError(getErrorMessage(err)))
+  }, [locationId])
 
   useEffect(() => {
     api
@@ -120,7 +129,7 @@ export default function WorkspaceAvailability() {
         rentalType,
         teamId: teamId === '' ? null : teamId,
       })
-      setSuccess(`Reserva confirmada para "${selected.nombre}".`)
+      setSuccess(`Reserva confirmada para "${selected.nombre}". Pagala desde "Mis reservas" para completar el alquiler.`)
       setSelected(null)
       await searchRefetch()
     } catch (err) {
@@ -135,31 +144,45 @@ export default function WorkspaceAvailability() {
 
   return (
     <div>
-      <Link to="/workspaces" className="text-sm text-primary-700 hover:underline">
+      <Link to="/locations" className="text-sm text-primary-700 hover:underline">
         ← Volver
       </Link>
       <h1 className="text-2xl font-bold mt-2 mb-6">
-        {availability ? availability.locationName : 'Disponibilidad'}
+        {location ? location.nombre : 'Disponibilidad'}
       </h1>
 
-      {availability && (
+      {location && (
         <div className="mb-6 rounded-xl border border-border bg-surface p-4 shadow-sm">
-          {[availability.address, availability.city, availability.province, availability.zipCode].filter(Boolean).length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              {[availability.address, availability.city, availability.province, availability.zipCode].filter(Boolean).join(', ')}
-            </p>
-          )}
-          {availability.description && (
-            <p className="mt-2 text-sm text-foreground whitespace-pre-line">{availability.description}</p>
-          )}
-          {(availability.contactEmail || availability.contactPhone) && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {availability.contactEmail && <a className="hover:underline" href={`mailto:${availability.contactEmail}`}>{availability.contactEmail}</a>}
-              {availability.contactEmail && availability.contactPhone && ' · '}
-              {availability.contactPhone && <span>{availability.contactPhone}</span>}
-            </p>
-          )}
-          {!availability.isActive && <p className="mt-2 text-sm text-amber-600 font-medium">Sede no disponible temporalmente</p>}
+          <div className="flex flex-wrap items-start gap-4">
+            <div className="h-24 w-36 shrink-0 rounded-md border border-border bg-surface-muted flex items-center justify-center overflow-hidden">
+              {location.imageUrl ? (
+                <img src={location.imageUrl} alt={location.nombre} className="h-24 w-36 object-cover" />
+              ) : (
+                <span className="text-3xl opacity-40" aria-hidden="true">🏢</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              {[location.address, location.city, location.province, location.zipCode].filter(Boolean).length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {[location.address, location.city, location.province, location.zipCode].filter(Boolean).join(', ')}
+                </p>
+              )}
+              {location.description && (
+                <p className="mt-2 text-sm text-foreground whitespace-pre-line">{location.description}</p>
+              )}
+              {(location.contactEmail || location.contactPhone) && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {location.contactEmail && <a className="hover:underline" href={`mailto:${location.contactEmail}`}>{location.contactEmail}</a>}
+                  {location.contactEmail && location.contactPhone && ' · '}
+                  {location.contactPhone && <span>{location.contactPhone}</span>}
+                </p>
+              )}
+              {!location.isActive && <p className="mt-2 text-sm text-amber-600 font-medium">Sede no disponible temporalmente</p>}
+              <div className="mt-3">
+                <AmenityChips amenities={location.amenities} />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -238,14 +261,6 @@ export default function WorkspaceAvailability() {
                 </ul>
               </div>
 
-              {selected.amenities.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {selected.amenities.map((amenity) => (
-                    <span key={amenity.id} className="rounded-full border border-border bg-surface-muted px-2 py-1 text-xs">{amenity.nombre}</span>
-                  ))}
-                </div>
-              )}
-
               <p className="text-sm text-muted-foreground mb-3">
                 {RENTAL_LABEL[rentalType]} · {date} {startTime} – {endTime}
               </p>
@@ -287,6 +302,42 @@ export default function WorkspaceAvailability() {
         </div>
       ) : (
         <p className="text-muted-foreground">Seleccioná una fecha, un rango horario y una modalidad para ver la disponibilidad.</p>
+      )}
+
+      {availability && (
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold mb-4">Espacios ({availability.elements.length})</h2>
+          {availability.elements.length === 0 ? (
+            <p className="text-muted-foreground">Esta sede todavía no tiene espacios en el plano.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availability.elements.map((el) => (
+                <button
+                  key={el.workspaceId}
+                  type="button"
+                  onClick={() => el.available && setSelected(el)}
+                  disabled={!el.available}
+                  className={`text-left border rounded-lg bg-surface p-4 shadow-sm ${el.available ? 'hover:shadow-soft-lg' : 'opacity-60'}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-semibold">{el.nombre}</h3>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${el.available ? 'bg-green-100 text-green-700' : 'bg-rose-100 text-rose-700'}`}>
+                      {el.available ? 'Disponible' : 'Ocupado'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {TYPE_LABEL[el.workspaceType]} · Capacidad {el.capacity}
+                  </p>
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    {el.pricePerHour != null && <div>Hora: {currencySymbol(el.currency)} {el.pricePerHour.toLocaleString('es-AR')}</div>}
+                    {el.pricePerDay != null && <div>Día: {currencySymbol(el.currency)} {el.pricePerDay.toLocaleString('es-AR')}</div>}
+                    {el.pricePerMonth != null && <div>Mes: {currencySymbol(el.currency)} {el.pricePerMonth.toLocaleString('es-AR')}</div>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

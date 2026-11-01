@@ -39,7 +39,7 @@ export default function LoginPage() {
     try {
       const { data } = await api.post<AuthResponse>('/auth/google', { idToken, accountType })
       setAuth(data.token, data.user)
-      navigate(data.user.accountType === 'OWNER' ? '/dashboard' : '/workspaces')
+      navigate(data.user.accountType === 'OWNER' ? '/dashboard' : '/locations')
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {

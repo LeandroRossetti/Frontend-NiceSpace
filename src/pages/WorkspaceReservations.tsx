@@ -10,6 +10,22 @@ const STATUS_COLOR: Record<string, string> = {
   COMPLETADA: 'bg-surface-muted text-muted-foreground',
 }
 
+const PAYMENT_LABEL: Record<string, string> = {
+  PAID: 'Pagado',
+  PENDING: 'Pago pendiente',
+  REJECTED: 'Pago rechazado',
+}
+
+const PAYMENT_COLOR: Record<string, string> = {
+  PAID: 'bg-green-100 text-green-700',
+  PENDING: 'bg-amber-100 text-amber-700',
+  REJECTED: 'bg-danger-500/10 text-danger-700',
+}
+
+function currencySymbol(currency: string): string {
+  return currency === 'USD' ? 'US$' : '$'
+}
+
 export default function WorkspaceReservations() {
   const { id } = useParams()
   const [reservations, setReservations] = useState<ReservationDto[]>([])
@@ -65,11 +81,16 @@ export default function WorkspaceReservations() {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {r.rentalType === 'HORA' ? 'Por hora' : r.rentalType === 'DIA' ? 'Por día' : 'Por mes'}
-                  {r.totalPrice != null && <> · ARS {r.totalPrice.toLocaleString('es-AR')}</>}
+                  {r.totalPrice != null && <> · {currencySymbol(r.currency)} {r.totalPrice.toLocaleString('es-AR')}</>}
                 </p>
                 {r.teamName && <p className="text-xs text-primary-700">Equipo: {r.teamName}</p>}
               </div>
               <div className="flex items-center gap-3">
+                {r.paymentStatus && (
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${PAYMENT_COLOR[r.paymentStatus]}`}>
+                    {PAYMENT_LABEL[r.paymentStatus]}
+                  </span>
+                )}
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLOR[r.status]}`}>
                   {r.status}
                 </span>

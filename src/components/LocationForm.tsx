@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { getErrorMessage } from '../api/client'
 import { uploadImage } from '../api/images'
 import type { CreateLocationRequest, LocationDto } from '../api/types'
+import AmenitySelect from './AmenitySelect'
 
 const MAX_IMAGE_BYTES = 32 * 1024 * 1024
 
@@ -26,6 +27,7 @@ export default function LocationForm({ initial, submitLabel, submitting, onSubmi
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [amenityIds, setAmenityIds] = useState<number[]>(initial?.amenities.map((amenity) => amenity.id) ?? [])
   const [error, setError] = useState('')
   const [imageError, setImageError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -42,6 +44,7 @@ export default function LocationForm({ initial, submitLabel, submitting, onSubmi
     setContactPhone(initial.contactPhone ?? '')
     setIsActive(initial.isActive)
     setImageUrl(initial.imageUrl ?? '')
+    setAmenityIds(initial.amenities.map((amenity) => amenity.id))
   }, [initial])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,6 +104,7 @@ export default function LocationForm({ initial, submitLabel, submitting, onSubmi
       contactPhone: contactPhone.trim() || undefined,
       imageUrl: finalImageUrl.trim() || undefined,
       isActive,
+      amenityIds,
     })
   }
 
@@ -188,6 +192,8 @@ export default function LocationForm({ initial, submitLabel, submitting, onSubmi
           <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describí la sede, servicios, ambiente..." rows={4} className={inputClass} />
         </div>
       </div>
+
+      <AmenitySelect selected={amenityIds} onChange={setAmenityIds} />
 
       <label className="flex items-center gap-2 text-sm text-muted-foreground">
         <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="accent-primary-700" />

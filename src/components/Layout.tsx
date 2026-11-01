@@ -31,8 +31,8 @@ export default function Layout() {
                   Mis espacios
                 </NavLink>
               ) : (
-                <NavLink to="/workspaces" className={linkClass}>
-                  Buscar espacios
+                <NavLink to="/locations" className={linkClass}>
+                  Buscar sedes
                 </NavLink>
               )}
               {user.accountType === 'TENANT' && (

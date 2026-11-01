@@ -39,6 +39,7 @@ export interface LocationDto {
   imageUrl: string | null
   isActive: boolean
   createdAt: string
+  amenities: AmenityDto[]
 }
 
 export interface WorkspaceDto {
@@ -61,7 +62,6 @@ export interface WorkspaceDto {
   currency: string
   isActive: boolean
   createdAt: string
-  amenities: AmenityDto[]
 }
 
 export interface FloorDto {
@@ -74,6 +74,26 @@ export interface FloorDto {
 
 export type ReservationStatus = 'CONFIRMADA' | 'CANCELADA' | 'COMPLETADA'
 
+export type PaymentStatus = 'PENDING' | 'PAID' | 'REJECTED'
+
+export interface PaymentDto {
+  id: number
+  reservationId: number
+  orderId: string
+  paymentId: string | null
+  status: PaymentStatus
+  amount: number
+  currency: string
+  checkoutUrl: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ConfirmPaymentRequest {
+  reservationId: number
+  paymentId: string
+}
+
 export interface ReservationDto {
   id: number
   workspaceId: number
@@ -83,9 +103,13 @@ export interface ReservationDto {
   locationName: string
   rentalType: RentalType
   totalPrice: number | null
+  currency: string
   startTime: string
   endTime: string
   status: ReservationStatus
+  paymentStatus: PaymentStatus | null
+  paymentId: string | null
+  checkoutUrl: string | null
   createdById: number
   createdByName: string
   teamId: number | null
@@ -110,7 +134,6 @@ export interface AvailabilityElement {
   maxDays: number
   maxMonths: number
   currency: string
-  amenities: AmenityDto[]
 }
 
 export interface AvailabilityResponse {
@@ -154,6 +177,7 @@ export interface CreateLocationRequest {
   contactPhone?: string
   imageUrl?: string
   isActive?: boolean
+  amenityIds?: number[]
 }
 
 export type UpdateLocationRequest = CreateLocationRequest
@@ -171,7 +195,6 @@ export interface CreateWorkspaceRequest {
   currency?: string
   isActive?: boolean
   floorId?: number | null
-  amenityIds?: number[]
 }
 
 export type WorkspaceUpdateRequest = CreateWorkspaceRequest
