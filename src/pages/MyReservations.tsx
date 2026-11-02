@@ -34,6 +34,8 @@ export default function MyReservations() {
   const [notice, setNotice] = useState('')
   const [canceling, setCanceling] = useState<number | null>(null)
   const [paying, setPaying] = useState<number | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const [pendingConfirm, setPendingConfirm] = useState<{ paymentId: string; reservationId: number } | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
   const load = () => {
@@ -46,6 +48,31 @@ export default function MyReservations() {
 
   useEffect(load, [])
 
+  const confirmPayment = async (paymentId: string, reservationId: number) => {
+    setConfirming(true)
+    setError('')
+    setSuccess('')
+    setNotice('')
+    try {
+      const { data } = await api.post<PaymentDto>('/payments/confirm', { reservationId, paymentId })
+      if (data.status === 'PAID') {
+        setSuccess('¡Pago aprobado! Tu reserva quedó abonada.')
+      } else if (data.status === 'REJECTED') {
+        setNotice('El pago fue rechazado. Podés intentarlo de nuevo.')
+      } else {
+        setNotice('El pago quedó pendiente de confirmación.')
+      }
+      setPendingConfirm(null)
+      setSearchParams({}, { replace: true })
+      load()
+    } catch (err) {
+      setError(getErrorMessage(err))
+      setPendingConfirm({ paymentId, reservationId })
+    } finally {
+      setConfirming(false)
+    }
+  }
+
   // Al volver de Mercado Pago (back_urls), confirmamos el pago contra la API.
   useEffect(() => {
     const paymentId = searchParams.get('payment_id')
@@ -54,23 +81,7 @@ export default function MyReservations() {
     const reservationId = Number(externalReference)
     if (!reservationId) return
 
-    setError('')
-    setSuccess('')
-    setNotice('')
-    api
-      .post<PaymentDto>('/payments/confirm', { reservationId, paymentId })
-      .then(({ data }) => {
-        if (data.status === 'PAID') {
-          setSuccess('¡Pago aprobado! Tu reserva quedó abonada.')
-        } else if (data.status === 'REJECTED') {
-          setNotice('El pago fue rechazado. Podés intentarlo de nuevo.')
-        } else {
-          setNotice('El pago quedó pendiente de confirmación.')
-        }
-        return load()
-      })
-      .catch((err) => setError(getErrorMessage(err)))
-      .finally(() => setSearchParams({}, { replace: true }))
+    confirmPayment(paymentId, reservationId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
@@ -111,6 +122,17 @@ export default function MyReservations() {
       {error && <p className="text-sm text-danger-600 mb-4">{error}</p>}
       {success && <p className="text-sm text-green-600 mb-4">{success}</p>}
       {notice && <p className="text-sm text-amber-600 mb-4">{notice}</p>}
+      {pendingConfirm && (
+        <div className="mb-4">
+          <button
+            onClick={() => confirmPayment(pendingConfirm.paymentId, pendingConfirm.reservationId)}
+            disabled={confirming}
+            className="text-sm bg-primary-700 text-white rounded-md px-3 py-1 hover:bg-primary-800 disabled:opacity-50"
+          >
+            {confirming ? 'Verificando...' : 'Reintentar confirmación del pago'}
+          </button>
+        </div>
+      )}
 
       {reservations.length === 0 ? (
         <p className="text-muted-foreground">No tenés reservas todavía.</p>
