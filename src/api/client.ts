@@ -1,8 +1,10 @@
 import axios, { AxiosError } from 'axios'
 import { useAuthStore } from '../store/authStore'
 
+const backendUrl = import.meta.env.VITE_API_URL ?? ''
+
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${backendUrl}/api`,
   timeout: 60000,
 })
 
