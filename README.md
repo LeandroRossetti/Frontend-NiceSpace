@@ -2,7 +2,7 @@
 
 Interfaz web de OpenSpot, la plataforma de gestión de espacios de coworking. Permite a los dueños publicar sedes y dibujar sus planos, y a los inquilinos buscar disponibilidad, reservar y coordinar equipos.
 
-> **Nombre del producto:** OpenSpot (antes NiceSpace). El código conserva identificadores legacy como `cowork-frontend` y `cowork-auth`; el backend mantiene `cowork-backend` por compatibilidad.
+> **Nombre del producto:** OpenSpot. El código conserva identificadores legacy como `cowork-frontend` y `cowork-auth`; el backend mantiene `cowork-backend` por compatibilidad.
 
 ---
 
@@ -316,4 +316,4 @@ Para producción:
 ## Documentación adicional
 
 - **Contexto completo del proyecto (back + front):** `../CONTEXTO-OPENSPOT.md`, en la carpeta raíz que contiene ambos repositorios.
-- **Backend:** [github.com/LeandroRossetti/Backend-NiceSpace](https://github.com/LeandroRossetti/Backend-NiceSpace)
+- **Backend:** [github.com/LeandroRossetti/Backend-OpenSpot](https://github.com/LeandroRossetti/Backend-OpenSpot)
